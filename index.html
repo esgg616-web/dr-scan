@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DR Scan — ระบบคัดกรองเบาหวานขึ้นตา</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0d1613;
+    --panel:#16211d;
+    --panel-alt:#1c2823;
+    --hairline:#2a3833;
+    --teal:#4fa89a;
+    --teal-dim:#356359;
+    --amber:#e0954a;
+    --coral:#d9614a;
+    --mint:#7bc9a0;
+    --text:#eef5f1;
+    --muted:#87998f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg-deep);
+    color:var(--text);
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    font-weight:400;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:'Space Grotesk', sans-serif;}
+  .wrap{
+    max-width:520px;
+    margin:0 auto;
+    padding:28px 18px 60px;
+  }
+  header{
+    padding-bottom:22px;
+    border-bottom:1px solid var(--hairline);
+    margin-bottom:24px;
+  }
+  header h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:1.5rem;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    color:var(--muted);
+    margin:0;
+    font-size:0.92rem;
+  }
+
+  .steps{
+    display:flex;
+    gap:6px;
+    margin-bottom:26px;
+  }
+  .step{
+    flex:1;
+    padding:10px 12px;
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    font-size:0.78rem;
+    color:var(--muted);
+    text-align:center;
+    transition:border-color .3s, color .3s, background .3s;
+  }
+  .step.active{
+    border-color:var(--teal);
+    color:var(--text);
+    background:var(--panel-alt);
+  }
+  .step .n{
+    font-family:'Space Grotesk', sans-serif;
+    display:block;
+    font-size:0.95rem;
+    color:var(--teal);
+    margin-bottom:2px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:18px;
+  }
+
+  .dropzone{
+    border:1.5px dashed var(--hairline);
+    border-radius:8px;
+    padding:34px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s, background .2s;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--teal);
+    background:var(--panel-alt);
+  }
+  .dropzone p{margin:0; color:var(--muted); font-size:0.9rem;}
+  .dropzone .icon{font-size:1.6rem; margin-bottom:8px; opacity:0.85;}
+  input[type=file]{display:none;}
+
+  .preview-box{
+    position:relative;
+    border-radius:8px;
+    overflow:hidden;
+    border:1px solid var(--hairline);
+    margin-top:16px;
+    background:#000;
+  }
+  .preview-box img{
+    display:block;
+    width:100%;
+    max-height:280px;
+    object-fit:cover;
+  }
+  .scanline{
+    position:absolute;
+    left:0; right:0; top:0;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--teal), transparent);
+    box-shadow:0 0 12px 2px var(--teal);
+    opacity:0;
+  }
+  .scanline.on{
+    animation:sweep 1.6s ease-in-out;
+  }
+  @keyframes sweep{
+    0%{ top:0; opacity:0; }
+    8%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ top:100%; opacity:0; }
+  }
+
+  button.primary{
+    width:100%;
+    margin-top:16px;
+    padding:13px;
+    border:none;
+    border-radius:7px;
+    background:var(--teal);
+    color:#0d1613;
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    font-weight:600;
+    font-size:0.96rem;
+    cursor:pointer;
+    transition:background .2s, opacity .2s;
+  }
+  button.primary:disabled{
+    background:var(--teal-dim);
+    color:var(--muted);
+    cursor:not-allowed;
+  }
+  button.primary:not(:disabled):active{
+    background:#3f8c80;
+  }
+
+  .result-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:4px;
+  }
+  .result-head .label{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+  .result-head .conf{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:1.9rem;
+    font-weight:600;
+  }
+  .result-sub{
+    color:var(--muted);
+    font-size:0.85rem;
+    margin-bottom:18px;
+  }
+
+  .bar-row{
+    display:grid;
+    grid-template-columns:100px 1fr 46px;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+    font-size:0.82rem;
+  }
+  .bar-row .cls-name{color:var(--muted);}
+  .bar-track{
+    height:8px;
+    background:var(--panel-alt);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    border-radius:4px;
+    width:0%;
+    transition:width .8s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar-row .pct{
+    font-family:'Space Grotesk', sans-serif;
+    text-align:right;
+    color:var(--text);
+  }
+
+  .note{
+    border-radius:8px;
+    background:var(--panel-alt);
+    border:1px solid var(--hairline);
+    padding:12px 14px;
+    font-size:0.8rem;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  .note b{color:var(--text);}
+
+  .model-status{margin-top:10px; font-size:0.8rem; color:var(--muted); text-align:center;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>DR Scan</h1>
+    <p>ระบบคัดกรองภาวะเบาหวานขึ้นตาจากภาพถ่ายจอประสาทตา · ประมวลผลในอุปกรณ์ของคุณ รูปไม่ถูกอัปโหลดไปไหน</p>
+  </header>
+
+  <div class="steps">
+    <div class="step active" id="step1"><span class="n">1</span>อัปโหลด</div>
+    <div class="step" id="step2"><span class="n">2</span>วิเคราะห์</div>
+    <div class="step" id="step3"><span class="n">3</span>ผลลัพธ์</div>
+  </div>
+
+  <div class="card">
+    <div class="dropzone" id="dropzone">
+      <div class="icon">◎</div>
+      <p>แตะเพื่อเลือกภาพถ่ายจอประสาทตา (fundus image)<br>รองรับ JPG, PNG</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <div class="preview-box hidden" id="previewBox">
+      <img id="previewImg" src="" alt="ภาพที่อัปโหลด">
+      <div class="scanline" id="scanline"></div>
+    </div>
+
+    <button class="primary" id="analyzeBtn" disabled>วิเคราะห์ภาพ</button>
+    <div class="model-status" id="modelStatus">กำลังโหลดโมเดล…</div>
+  </div>
+
+  <div class="card hidden" id="resultCard">
+    <div class="result-head">
+      <div class="label" id="resultLabel">—</div>
+      <div class="conf num" id="resultConf">—</div>
+    </div>
+    <div class="result-sub" id="resultSub">ความเชื่อมั่นของการทำนาย</div>
+
+    <div id="barList"></div>
+
+    <div class="note"><b>หมายเหตุ:</b> ผลลัพธ์จากโมเดลที่เทรนด้วย APTOS 2019 เป็นระบบคัดกรองเบื้องต้นเพื่อการศึกษา ไม่ใช่การวินิจฉัยทางการแพทย์ หากมีความกังวลเกี่ยวกับสุขภาพตา ควรพบจักษุแพทย์</div>
+  </div>
+
+</div>
+
+<script src="ort/ort.wasm.min.js"></script>
+<script src="core.js"></script>
+<script>
+const CLASSES = [
+  { key:'no_dr', short:'ปกติ', name:'ไม่มีภาวะ — No DR', color:'#4fa89a',
+    desc:'ไม่พบร่องรอยความผิดปกติของจอประสาทตาที่เกี่ยวข้องกับเบาหวานในภาพนี้' },
+  { key:'mild', short:'ระยะ 1', name:'ระยะที่ 1 — Mild NPDR', color:'#6fae7f',
+    desc:'มีจุดเลือดออกเล็กๆ หรือหลอดเลือดโป่งพองเล็กน้อย (Microaneurysms) ผู้ป่วยมักไม่มีอาการ มองเห็นชัดเจนปกติ' },
+  { key:'moderate', short:'ระยะ 2', name:'ระยะที่ 2 — Moderate NPDR', color:'#b8a34f',
+    desc:'หลอดเลือดฝอยเริ่มตีบตัน ทำให้เลือดหรือสารเหลวรั่วซึมออกมา มีจุดเลือดออกมากขึ้น เริ่มส่งผลกระทบต่อการมองเห็นบ้างเล็กน้อย' },
+  { key:'severe', short:'ระยะ 3', name:'ระยะที่ 3 — Severe NPDR', color:'#d98c3f',
+    desc:'หลอดเลือดฝอยอุดตันเป็นบริเวณกว้าง จอประสาทตาเริ่มขาดออกซิเจน ร่างกายจะส่งสัญญาณเตือนให้เตรียมสร้างหลอดเลือดใหม่' },
+  { key:'pdr', short:'ระยะ 4', name:'ระยะที่ 4 — Proliferative DR (PDR)', color:'#b23a3a',
+    desc:'จอประสาทตาขาดเลือดรุนแรง เกิดการสร้างหลอดเลือดใหม่ที่ผิดปกติ เปราะบาง แตกง่าย และอาจมีเลือดออกในน้ำวุ้นตา ทำให้เกิดพังผืดดึงรั้งจอประสาทตา เสี่ยงสูญเสียการมองเห็นอย่างรุนแรง' },
+];
+
+const MODEL_URL = 'model.onnx';
+const MODEL_CFG_URL = 'model_config.json';
+const MAX_PIXELS = 12e6; // กันรูปใหญ่เกินจนมือถือหน่วยความจำไม่พอ
+
+const dropzone   = document.getElementById('dropzone');
+const fileInput  = document.getElementById('fileInput');
+const previewBox = document.getElementById('previewBox');
+const previewImg = document.getElementById('previewImg');
+const scanline   = document.getElementById('scanline');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const modelStatus= document.getElementById('modelStatus');
+const resultCard = document.getElementById('resultCard');
+const resultLabel= document.getElementById('resultLabel');
+const resultConf = document.getElementById('resultConf');
+const resultSub  = document.getElementById('resultSub');
+const barList    = document.getElementById('barList');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+
+let currentFile = null;
+let session = null;
+let imgSize = 320;
+
+// ---------- โหลดโมเดล ----------
+async function initModel(){
+  try {
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+    ort.env.wasm.wasmPaths = new URL('ort/', location.href).href;   // ใช้ URL เต็มกันสับสนเรื่อง path
+    try {
+      const cfg = await (await fetch(MODEL_CFG_URL)).json();
+      if (cfg.img_size) imgSize = cfg.img_size;
+    } catch(e) {}
+    const resp = await fetch(MODEL_URL);
+    if (!resp.ok) throw new Error('โหลด model.onnx ไม่ได้ (HTTP ' + resp.status + ')');
+    const buf = await resp.arrayBuffer();
+    session = await ort.InferenceSession.create(new Uint8Array(buf), { executionProviders: ['wasm'] });
+    modelStatus.textContent = 'โมเดลพร้อมใช้งาน';
+    if (currentFile) analyzeBtn.disabled = false;
+  } catch (err) {
+    console.error(err);
+    modelStatus.textContent = 'โหลดโมเดลไม่สำเร็จ: ' + (err && err.message ? err.message : err) +
+      ' — ตรวจว่ามีไฟล์ model.onnx และเปิดผ่านลิงก์เว็บ (ไม่ใช่เปิดไฟล์ตรงๆ)';
+  }
+}
+
+// ---------- เลือกรูป ----------
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files && e.target.files[0]) loadImage(e.target.files[0]); });
+['dragover','dragleave','drop'].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.toggle('drag', evt === 'dragover');
+    if (evt === 'drop' && e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+  });
+});
+
+function loadImage(file){
+  currentFile = file;
+  previewImg.src = URL.createObjectURL(file);
+  previewBox.classList.remove('hidden');
+  analyzeBtn.disabled = !session;
+  resultCard.classList.add('hidden');
+  step2.classList.remove('active');
+  step3.classList.remove('active');
+  step1.classList.add('active');
+}
+
+async function readPixels(file){
+  const bmp = await createImageBitmap(file);
+  let w = bmp.width, h = bmp.height;
+  if (w * h > MAX_PIXELS) { const k = Math.sqrt(MAX_PIXELS / (w * h)); w = Math.round(w * k); h = Math.round(h * k); }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(bmp, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  if (bmp.close) bmp.close();
+  return { data, w, h };
+}
+
+// ---------- วิเคราะห์ ----------
+analyzeBtn.addEventListener('click', async () => {
+  if (!currentFile || !session) return;
+  analyzeBtn.disabled = true;
+  step1.classList.remove('active');
+  step2.classList.add('active');
+  scanline.classList.remove('on'); void scanline.offsetWidth; scanline.classList.add('on');
+  await new Promise(r => setTimeout(r, 60)); // ให้ UI วาดแอนิเมชันก่อนเริ่มคำนวณหนัก
+
+  try {
+    const { data, w, h } = await readPixels(currentFile);
+    const x = DRCore.preprocess(data, w, h, imgSize);
+    const out = await session.run({ [session.inputNames[0]]: new ort.Tensor('float32', x, [1, 3, imgSize, imgSize]) });
+    const probs = DRCore.softmax(out[session.outputNames[0]].data);
+    const q = DRCore.measureQuality(data, w, h);
+    const a = DRCore.assess(q, probs);
+    renderResult(probs.indexOf(Math.max(...probs)), probs, a.assessable, a.reasons);
+    step2.classList.remove('active');
+    step3.classList.add('active');
+  } catch (err) {
+    console.error(err);
+    step2.classList.remove('active');
+    step1.classList.add('active');
+    alert('วิเคราะห์ไม่สำเร็จ ลองรูปอื่น หรือรีเฟรชหน้าแล้วลองใหม่');
+  } finally {
+    analyzeBtn.disabled = false;
+  }
+});
+
+function renderResult(topIdx, probs, assessable = true, reasons = []){
+  resultCard.classList.remove('hidden');
+  if (assessable) {
+    resultLabel.textContent = CLASSES[topIdx].name;
+    resultLabel.style.color = CLASSES[topIdx].color;
+    resultConf.textContent = (probs[topIdx]*100).toFixed(1) + '%';
+    resultSub.textContent = CLASSES[topIdx].desc;
+    barList.style.opacity = 1;
+  } else {
+    resultLabel.textContent = 'ประเมินไม่ได้ — ควรให้แพทย์ตรวจ';
+    resultLabel.style.color = '#a9b8c6';
+    resultConf.textContent = '?';
+    resultSub.textContent = 'สาเหตุ: ' + reasons.join(' · ') +
+      ' — ค่าด้านล่างเป็นเพียงผลดิบของโมเดล ห้ามใช้อ้างอิง';
+    barList.style.opacity = 0.4;
+  }
+
+  barList.innerHTML = '';
+  CLASSES.forEach((c, idx) => {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="cls-name">${c.short}</div>
+      <div class="bar-track"><div class="bar-fill" style="background:${c.color}"></div></div>
+      <div class="pct">${(probs[idx]*100).toFixed(1)}%</div>
+    `;
+    barList.appendChild(row);
+    requestAnimationFrame(() => { row.querySelector('.bar-fill').style.width = (probs[idx]*100) + '%'; });
+  });
+  resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+initModel();
+</script>
+</body>
+</html>
